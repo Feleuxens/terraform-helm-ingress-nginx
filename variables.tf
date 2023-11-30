@@ -4,7 +4,7 @@ variable "enable_metrics" {
 }
 
 variable "cpu_request" {
-  default = "100m"
+  default = "250m"
   type    = string
 }
 variable "memory_request" {
