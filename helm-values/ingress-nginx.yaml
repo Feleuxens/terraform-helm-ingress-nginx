@@ -73,7 +73,7 @@ controller:
     enabled: ${enable_metrics}
 
     serviceMonitor:
-      enabled: true
+      enabled: false
       additionalLabels:
         release: kube-prometheus-stack
     prometheusRule:
