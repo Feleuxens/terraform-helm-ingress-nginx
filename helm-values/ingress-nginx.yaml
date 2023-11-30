@@ -25,24 +25,24 @@ controller:
   ## https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases
   maxmindLicenseKey: ""
 
-  affinity:
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchExpressions:
-          - key: app.kubernetes.io/name
-            operator: In
-            values:
-            - ingress-nginx
-          - key: app.kubernetes.io/instance
-            operator: In
-            values:
-            - ingress-nginx
-          - key: app.kubernetes.io/component
-            operator: In
-            values:
-            - controller
-        topologyKey: kubernetes.io/hostname
+  # affinity:
+  #   podAntiAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #     - labelSelector:
+  #         matchExpressions:
+  #         - key: app.kubernetes.io/name
+  #           operator: In
+  #           values:
+  #           - ingress-nginx
+  #         - key: app.kubernetes.io/instance
+  #           operator: In
+  #           values:
+  #           - ingress-nginx
+  #         - key: app.kubernetes.io/component
+  #           operator: In
+  #           values:
+  #           - controller
+  #       topologyKey: kubernetes.io/hostname
 
   ## Define requests resources to avoid probe issues due to CPU utilization in busy nodes
   ## ref: https://github.com/kubernetes/ingress-nginx/issues/4735#issuecomment-551204903
