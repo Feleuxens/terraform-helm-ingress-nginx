@@ -1,0 +1,126 @@
+controller:
+  # -- Will add custom configuration options to Nginx https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/
+  config:
+    log-format-upstream: '{"msec":"$msec","connection":"$connection","connection_requests":"$connection_requests","pid":"$pid","request_id":"$request_id","request_length":"$request_length","remote_addr":"$remote_addr","remote_user":"$remote_user","remote_port":"$remote_port","time_local":"$time_local","time_iso8601":"$time_iso8601","request":"$request","request_uri":"$request_uri","args":"$args","status":"$status","body_bytes_sent":"$body_bytes_sent","bytes_sent":"$bytes_sent","http_referer":"$http_referer","http_user_agent":"$http_user_agent","http_x_forwarded_for":"$http_x_forwarded_for","http_host":"$http_host","server_name":"$server_name","request_time":"$request_time","upstream":"$upstream_addr","upstream_connect_time":"$upstream_connect_time","upstream_header_time":"$upstream_header_time","upstream_response_time":"$upstream_response_time","upstream_response_length":"$upstream_response_length","upstream_cache_status":"$upstream_cache_status","ssl_protocol":"$ssl_protocol","ssl_cipher":"$ssl_cipher","scheme":"$scheme","request_method":"$request_method","server_protocol":"$server_protocol","pipe":"$pipe","gzip_ratio":"$gzip_ratio","http_cf_ray":"$http_cf_ray","geoip_country_code":"$geoip_country_code"}'
+    use-gzip: true
+    enable-brotli: true
+    brotli-level: 4
+  # -- Process Ingress objects without ingressClass annotation/ingressClassName field
+  # Overrides value for --watch-ingress-without-class flag of the controller binary
+  # Defaults to false
+  watchIngressWithoutClass: true
+  ## This section refers to the creation of the IngressClass resource
+  ## IngressClass resources are supported since k8s >= 1.18 and required since k8s >= 1.19
+  ingressClassResource:
+    # -- Name of the ingressClass
+    name: nginx
+    # -- Is this ingressClass enabled or not
+    enabled: true
+    # -- Is this the default ingressClass for the cluster
+    default: true
+  # -- For backwards compatibility with ingress.class annotation, use ingressClass.
+  # Algorithm is as follows, first ingressClassName is considered, if not present, controller looks for ingress.class annotation
+  ingressClass: nginx
+  # -- Maxmind license key to download GeoLite2 Databases.
+  ## https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases
+  maxmindLicenseKey: ""
+
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - ingress-nginx
+          - key: app.kubernetes.io/instance
+            operator: In
+            values:
+            - ingress-nginx
+          - key: app.kubernetes.io/component
+            operator: In
+            values:
+            - controller
+        topologyKey: kubernetes.io/hostname
+
+  ## Define requests resources to avoid probe issues due to CPU utilization in busy nodes
+  ## ref: https://github.com/kubernetes/ingress-nginx/issues/4735#issuecomment-551204903
+  ## Ideally, there should be no limits.
+  ## https://engineering.indeedblog.com/blog/2019/12/cpu-throttling-regression-fix/
+  resources:
+    requests:
+      cpu: ${cpu_request}
+      memory: ${memory_request}
+    limits:
+      memory: ${memory_limit}
+  # Mutually exclusive with keda autoscaling
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  service:
+    ## Set external traffic policy to: "Local" to preserve source IP on providers supporting it.
+    ## Ref: https://kubernetes.io/docs/tutorials/services/source-ip/#source-ip-for-services-with-typeloadbalancer
+    externalTrafficPolicy: Local
+  
+  metrics:
+    port: 10254
+    portName: metrics
+    # if this port is changed, change healthz-port: in extraArgs: accordingly
+    enabled: ${enable_metrics}
+
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: kube-prometheus-stack
+    prometheusRule:
+      enabled: false
+      additionalLabels:
+        namespace: monitoring
+        release: kube-prometheus-stack
+      rules: []
+      # # These are just examples rules, please adapt them to your needs
+      # - alert: NGINXConfigFailed
+      #   expr: count(nginx_ingress_controller_config_last_reload_successful == 0) > 0
+      #   for: 1s
+      #   labels:
+      #     severity: critical
+      #   annotations:
+      #     description: bad ingress config - nginx config test failed
+      #     summary: uninstall the latest ingress changes to allow config reloads to resume
+      # # By default a fake self-signed certificate is generated as default and
+      # # it is fine if it expires. If `--default-ssl-certificate` flag is used
+      # # and a valid certificate passed please do not filter for `host` label!
+      # # (i.e. delete `{host!="_"}` so also the default SSL certificate is
+      # # checked for expiration)
+      # - alert: NGINXCertificateExpiry
+      #   expr: (avg(nginx_ingress_controller_ssl_expire_time_seconds{host!="_"}) by (host) - time()) < 604800
+      #   for: 1s
+      #   labels:
+      #     severity: critical
+      #   annotations:
+      #     description: ssl certificate(s) will expire in less then a week
+      #     summary: renew expiring certificates to avoid downtime
+      # - alert: NGINXTooMany500s
+      #   expr: 100 * ( sum( nginx_ingress_controller_requests{status=~"5.+"} ) / sum(nginx_ingress_controller_requests) ) > 5
+      #   for: 1m
+      #   labels:
+      #     severity: warning
+      #   annotations:
+      #     description: Too many 5XXs
+      #     summary: More than 5% of all requests returned 5XX, this requires your attention
+      # - alert: NGINXTooMany400s
+      #   expr: 100 * ( sum( nginx_ingress_controller_requests{status=~"4.+"} ) / sum(nginx_ingress_controller_requests) ) > 5
+      #   for: 1m
+      #   labels:
+      #     severity: warning
+      #   annotations:
+      #     description: Too many 4XXs
+      #     summary: More than 5% of all requests returned 4XX, this requires your attention
+
+## Enable RBAC as per https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/rbac.md and https://github.com/kubernetes/ingress-nginx/issues/266
+rbac:
+  create: true
