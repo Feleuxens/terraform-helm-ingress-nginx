@@ -8,11 +8,11 @@ variable "cpu_request" {
   type    = string
 }
 variable "memory_request" {
-  default = "128Mi"
+  default = "768Mi"
   type    = string
 }
 
 variable "memory_limit" {
-  default = "512Mi"
+  default = "768Mi"
   type    = string
 }
