@@ -9,6 +9,7 @@ resource "helm_release" "ingress-nginx" {
 
   values = [
     templatefile("${path.module}/helm-values/ingress-nginx.yaml", {
+      allow_snippet_annotations : var.allow_snippet_annotations
       enable_metrics : var.enable_metrics
       cpu_request : var.cpu_request
       memory_request : var.memory_request
